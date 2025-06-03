@@ -1,0 +1,8 @@
+## Ignore all .fits files
+*.fits
+
+## Ignore all .h5 files
+*.h5
+
+## Ignore aia_synoptic_urls.txt
+aia_synoptic_urls.txt
