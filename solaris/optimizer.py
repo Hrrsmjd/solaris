@@ -1,6 +1,3 @@
-import math
-import torch
-
 class CustomLRScheduler:
     """Custom learning rate scheduler with step-wise decay."""
     

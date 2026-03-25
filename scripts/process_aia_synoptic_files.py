@@ -95,7 +95,7 @@ def process_aia_file(file_path, wavelength):
 
 def process_aia_directory(source_path, target_path):
     """Process all AIA files in a directory and its subdirectories."""
-    wavelengths = ["0094", "0131", "0171", "0193", "0211", "0304", "0335", "1600", "1700", "4500"]
+    wavelengths = ("0094", "0131", "0171", "0193", "0211", "0304", "0335", "1600", "1700", "4500")
 
     with h5py.File(target_path, "a") as hf:
         for dirpath, _, filenames in os.walk(source_path):
@@ -162,8 +162,8 @@ def process_aia_directory(source_path, target_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process AIA synoptic files.")
-    parser.add_argument("--source_path", help="Path to the source directory containing AIA files")
-    parser.add_argument("--target_path", help="Path to the target HDF5 file for processed data")
+    parser.add_argument("--source_path", required=True, help="Path to the source directory containing AIA files")
+    parser.add_argument("--target_path", required=True, help="Path to the target HDF5 file for processed data")
     args = parser.parse_args()
 
     # Check if the target_path is a directory
@@ -172,6 +172,8 @@ if __name__ == "__main__":
         args.target_path = os.path.join(args.target_path, "aia_12hour_512x512.h5")
 
     # Ensure the directory for the target file exists
-    os.makedirs(os.path.dirname(args.target_path), exist_ok=True)
+    target_dir = os.path.dirname(args.target_path)
+    if target_dir:
+        os.makedirs(target_dir, exist_ok=True)
 
     process_aia_directory(args.source_path, args.target_path)

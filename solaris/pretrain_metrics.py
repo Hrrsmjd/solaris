@@ -1,11 +1,11 @@
 from skimage.metrics import structural_similarity as ssim
-from sklearn.metrics import mean_squared_error
-import torch
-from solaris.model.solaris import Solaris
 import numpy as np
-from solaris.load_data_prov import CustomDataset_pretrain
+import torch
 from torch.utils.data import DataLoader
+
+from solaris.load_data_prov import CustomDataset_pretrain
 from solaris.normalization import transform
+from solaris.utils_data import build_metadata
 
 def rmse(predictions, ground_truth):
     """Calculate Root Mean Square Error using NumPy."""
@@ -16,9 +16,7 @@ def mean_absolute_error(predictions, ground_truth):
     return torch.abs(ground_truth - predictions).mean(dim=0)
 
 def percentage_of_good_pixels(pred: torch.Tensor, truth: torch.Tensor, t: float) -> float:
-    """
-    Calculate the percentage of good pixels metric.
-    """
+    """Calculate the percentage of good pixels metric."""
     t_decimal = t / 100.0
     
     diff = torch.abs(pred - truth)
@@ -45,7 +43,8 @@ def model_eval(model, test_dataset, norm_coeff_1, norm_coeff_2, input_scale, out
             data = transform(data, norm_coeff_1, norm_coeff_2, input_scale)
             target = transform(target, norm_coeff_1, norm_coeff_2, output_scale)
             
-            prediction = model(data)
+            metadata = build_metadata(data)
+            prediction = model(data.unsqueeze(1), metadata, 12, 0).squeeze(1)
             
             all_predictions.append(prediction.cpu().numpy())
             all_truths.append(target.cpu().numpy())
@@ -91,7 +90,8 @@ def save_sample(model, test_dataset, save_path, norm_coeff_1, norm_coeff_2, inpu
             data = transform(data, norm_coeff_1, norm_coeff_2, input_scale)
             target = transform(target, norm_coeff_1, norm_coeff_2, output_scale)
             
-            prediction = model(data)
+            metadata = build_metadata(data)
+            prediction = model(data.unsqueeze(1), metadata, 12, 0).squeeze(1)
             
             sample_data = {
                 'input': data.cpu().numpy(),

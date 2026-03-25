@@ -6,15 +6,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from solaris.area import area, radius_earth
-
 __all__ = [
     "FourierExpansion",
-    "pos_expansion",
     "pos_expansion_for_the_sun",
-    "scale_expansion",
     "lead_time_expansion",
-    "levels_expansion",
     "absolute_time_expansion",
 ]
 
@@ -62,7 +57,7 @@ class FourierExpansion(nn.Module):
             torch.Tensor: Fourier series-style expansion of `x` of shape `(..., n, d)`.
         """
         # If the input is not within the configured range, the embedding might be ambiguous!
-        in_range = torch.logical_and(self.lower <= x.abs(), torch.all(x.abs() <= self.upper))
+        in_range = torch.logical_and(self.lower <= x.abs(), x.abs() <= self.upper)
         in_range_or_zero = torch.all(
             torch.logical_or(in_range, x == 0)
         )  # Allow zeros to pass through.
@@ -93,37 +88,14 @@ class FourierExpansion(nn.Module):
         return encoding.float()  # Cast to `float32` to avoid incompatibilities.
 
 
-# Determine a reasonable smallest value for the scale embedding by assuming a smallest delta in
-# latitudes and longitudes.
 _delta = 0.01  # Reasonable smallest delta in latitude and longitude
-_min_patch_area: float = area(
-    torch.tensor(
-        [
-            # The smallest patches will be at the poles. Just use the north pole.
-            [90, 0],
-            [90, _delta],
-            [90 - _delta, _delta],
-            [90 - _delta, 0],
-        ],
-        dtype=torch.float64,
-    )
-).item()
-_area_earth = 4 * np.pi * radius_earth * radius_earth
 
-pos_expansion = FourierExpansion(_delta, 720)
 pos_expansion_for_the_sun = FourierExpansion(_delta, 512)
 """:class:`.FourierExpansion`: Fourier expansion for the encoding of latitudes and longitudes in
 degrees."""
 
-scale_expansion = FourierExpansion(_min_patch_area, _area_earth)
-""":class:`.FourierExpansion`: Fourier expansion for the encoding of patch areas in squared
-kilometers."""
-
 lead_time_expansion = FourierExpansion(1 / 60, 24 * 7 * 3)
 """:class:`.FourierExpansion`: Fourier expansion for the lead time encoding in hours."""
-
-levels_expansion = FourierExpansion(0.01, 1e5)
-""":class:`.FourierExpansion`: Fourier expansion for the pressure level encoding in hPa."""
 
 absolute_time_expansion = FourierExpansion(1, 24 * 365.25, assert_range=False)
 """:class:`.FourierExpansion`: Fourier expansion for the absolute time encoding in hours."""

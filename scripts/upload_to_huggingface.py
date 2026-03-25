@@ -1,4 +1,6 @@
+import argparse
 import os
+from pathlib import Path
 
 from huggingface_hub import HfApi
 
@@ -34,22 +36,6 @@ def upload_h5_files(local_folder, repo_id, files_to_upload=None):
             print(f"Skipping {file} as it's not a .h5 file or doesn't exist in the local folder.")
 
 
-local_folder = "/home/s1612415/RDS/aurora_for_the_sun/data"
-repo_id = "hrrsmjd/AIA_12hour_512x512"
-
-# To upload all .h5 files in the folder:
-# upload_h5_files(local_folder, repo_id)
-
-# To upload specific files:
-specific_files = [
-    "aia_12hour_512x512_2019.h5",
-    "aia_12hour_512x512_2021.h5",
-    "aia_12hour_512x512_2022.h5",
-    "aia_12hour_512x512_2023.h5",
-]
-# upload_h5_files(local_folder, repo_id, specific_files)
-
-
 def delete_npz_files(repo_id):
     api = HfApi()
 
@@ -65,5 +51,29 @@ def delete_npz_files(repo_id):
         api.delete_file(path_in_repo=file, repo_id=repo_id, repo_type="dataset")
         print(f"Deleted {file} successfully.")
 
+def main():
+    parser = argparse.ArgumentParser(description="Upload or clean files in the Solaris Hugging Face dataset repo.")
+    parser.add_argument("--repo-id", default="hrrsmjd/AIA_12hour_512x512")
+    parser.add_argument("--local-folder", type=Path, default=None)
+    parser.add_argument("--upload", nargs="*", default=None, help="Optional list of .h5 files to upload.")
+    parser.add_argument(
+        "--delete-npz",
+        action="store_true",
+        help="Delete all .npz files from the dataset repository.",
+    )
+    args = parser.parse_args()
 
-delete_npz_files(repo_id)
+    if args.upload is not None:
+        if args.local_folder is None:
+            raise ValueError("--local-folder is required when uploading files.")
+        upload_h5_files(str(args.local_folder), args.repo_id, args.upload or None)
+
+    if args.delete_npz:
+        delete_npz_files(args.repo_id)
+
+    if args.upload is None and not args.delete_npz:
+        parser.error("Specify at least one action: --upload or --delete-npz.")
+
+
+if __name__ == "__main__":
+    main()

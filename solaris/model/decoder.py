@@ -21,13 +21,13 @@ class Perceiver3DDecoder(nn.Module):
         num_heads: int = 16,
         drop_rate: float = 0.1,
         mlp_ratio: float = 4.0,
-        perceiver_ln_eps: float = 1e-5,  ##
+        perceiver_ln_eps: float = 1e-5,
     ):
         super().__init__()
         self.patch_size = patch_size
         self.embed_dim = embed_dim
 
-        assert out_levels > 1, "At least two latent levels are required."
+        assert out_levels > 0, "At least one output level is required."
         self.out_levels = out_levels
         self.latents = nn.Parameter(torch.randn(out_levels, embed_dim))
 
@@ -62,6 +62,7 @@ class Perceiver3DDecoder(nn.Module):
         return x
 
     def forward(self, x, metadata, lead_time, patch_res):
+        del lead_time
         # Compress the latent dimension from the U-net skip concatenation.
         B, L, D = x.shape
 

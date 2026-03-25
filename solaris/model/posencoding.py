@@ -30,9 +30,6 @@ def pos_enc_grid(
     grid_h = F.avg_pool2d(grid[:, 0], patch_dims)
     grid_w = F.avg_pool2d(grid[:, 1], patch_dims)
 
-    # Compute the square root of the patch_dims multiplied together.
-    # root_patch_dims = torch.sqrt(patch_dims[0] * patch_dims[1]) * torch.ones(B, dtype=dtype)
-
     # Use half of the dimensions for pix_x of the midpoints of the patches
     # and the other half for pix_y.
     # Before computing the encodings, flatten over the spatial dimensions.
@@ -41,10 +38,7 @@ def pos_enc_grid(
     encode_w = pos_expansion(grid_w.reshape(B, -1), encode_dim // 2)  # (B, L, D/2)
     pos_encode = torch.cat((encode_h, encode_w), axis=-1)  # (B, L, D)
 
-    # No need to split things up for the scale encoding.
-    # scale_encode = scale_expansion(root_patch_dims.reshape(B, -1), encode_dim)  # (B, L, D)
-
-    return pos_encode  # , scale_encode
+    return pos_encode
 
 
 def pos_enc(

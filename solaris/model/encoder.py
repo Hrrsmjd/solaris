@@ -22,12 +22,12 @@ class Perceiver3DEncoder(nn.Module):
         embed_dim: int = 1024,
         max_history_size: int = 2,
         latent_levels: int = 8,
-        depth: int = 2,  ##
+        depth: int = 2,
         head_dim: int = 64,
         num_heads: int = 16,
         drop_rate: float = 0.1,
         mlp_ratio: float = 4.0,
-        perceiver_ln_eps: float = 1e-5,  ##
+        perceiver_ln_eps: float = 1e-5,
     ):
         super().__init__()
         self.patch_size = patch_size
@@ -77,7 +77,12 @@ class Perceiver3DEncoder(nn.Module):
 
     def forward(self, x, metadata, lead_time):
         B, T, C, H, W = x.shape
-        ##TODO: assert lat.shape[0] == H and lon.shape[-1] == W
+        pix_x, pix_y, _ = metadata
+        if pix_x.shape[0] != H or pix_y.shape[-1] != W:
+            raise ValueError(
+                "Metadata spatial dimensions do not match the input tensor: "
+                f"expected ({H}, {W}), got ({pix_x.shape[0]}, {pix_y.shape[-1]})."
+            )
 
         # Patch embed the wavelength levels.
         x = rearrange(x, "b t c h w -> (b c) 1 t h w")
@@ -88,11 +93,11 @@ class Perceiver3DEncoder(nn.Module):
         # Aggregate over wavelength levels.
         x = self.aggregate_levels(x)
 
-        # Add position and scale embeddings to the 3D tensor.
+        # Add position embeddings to the 3D tensor.
         pos_encode = pos_enc(
             self.embed_dim,
-            metadata[0],
-            metadata[1],
+            pix_x,
+            pix_y,
             self.patch_size,
             pos_expansion=pos_expansion_for_the_sun,
         )

@@ -1,39 +1,31 @@
 from torch.utils.data import Dataset
-import h5py
-import torch
-from datetime import datetime
-import numpy as np
-from solaris.utils_data import *
+
+from solaris.utils_data import (
+    AIA_INPUT_WAVELENGTHS,
+    add_hours,
+    load_target_channel,
+    load_wavelength_stack,
+    read_id_file,
+    resolve_id_dir,
+)
+
 
 class CustomDataset_pretrain(Dataset):
-    def __init__(self, root_dir,data_set = "train"):
+    def __init__(self, root_dir, data_set="train", id_dir=None):
         self.root_dir = root_dir
         self.data_set = data_set
+        self.id_dir = resolve_id_dir(id_dir, data_root=root_dir)
         self.ids = self._get_valid_ids()
-    def _get_valid_ids(self): 
-        list_id = []
-        with open('CHANGE_PATH'+ self.data_set +'_id.txt', 'r') as file:
-            for line in file:
-                sublist = list(map(str, line.split()))  
-                list_id.append(sublist)    
- 
-        return list_id 
+
+    def _get_valid_ids(self):
+        return read_id_file(self.id_dir / f"{self.data_set}_id.txt")
 
     def __len__(self):
         return len(self.ids)
 
     def __getitem__(self, idx):
-        i = self.ids[idx]
-        plus_12 = add_hours(i, 12)
-        
-        with h5py.File(self.root_dir+i[0]+".h5", 'r') as file:
-            waves = ["0094", "0131", "0171", "0193", "0304", "0335"]
-            data_list = []
-            for wave in waves:
-                data_list.append(
-                    torch.from_numpy(np.array(file[i[0]][i[1]][i[2]][i[3]][wave],dtype=np.float32))[None, ...]
-                )
-            data = torch.cat(data_list, dim=0)
-            target = torch.from_numpy(np.array(file[plus_12[0]][plus_12[1]][plus_12[2]][plus_12[3]]["1700"],dtype=np.float32))[None, ...]
-        
+        current_timestamp = self.ids[idx]
+        future_timestamp = add_hours(current_timestamp, 12)
+        data = load_wavelength_stack(self.root_dir, current_timestamp, AIA_INPUT_WAVELENGTHS)
+        target = load_target_channel(self.root_dir, future_timestamp, "1700")
         return data, target

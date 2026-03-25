@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-from timm.models.layers import DropPath, to_3tuple
+from timm.layers import DropPath, to_3tuple
 
 from solaris.model.film import AdaptiveLayerNorm
 from solaris.model.fourier import lead_time_expansion

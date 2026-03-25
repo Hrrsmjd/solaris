@@ -36,6 +36,7 @@ class Solaris(torch.nn.Module):
         lora_steps: int = 40,
     ):
         super().__init__()
+        self.out_levels = out_levels
 
         self.encoder = Perceiver3DEncoder(
             patch_size=patch_size,
@@ -67,10 +68,10 @@ class Solaris(torch.nn.Module):
 
         self.decoder = Perceiver3DDecoder(
             patch_size=patch_size,
-            embed_dim=embed_dim**2,
+            embed_dim=embed_dim * 2,
             out_levels=out_levels,
             depth=dec_depth,
-            head_dim=embed_dim**2 // num_heads,
+            head_dim=embed_dim * 2 // num_heads,
             num_heads=num_heads,
             drop_rate=drop_rate,
             mlp_ratio=dec_mlp_ratio,
@@ -86,16 +87,21 @@ class Solaris(torch.nn.Module):
         self.stds.copy_(stds)
 
     def normalise(self, x):
+        if self.means.numel() != x.shape[2]:
+            return x
         means = self.means.view(1, 1, -1, 1, 1)
         stds = self.stds.view(1, 1, -1, 1, 1)
         return (x - means) / stds
 
     def unnormalise(self, x):
+        if self.means.numel() != x.shape[2]:
+            return x
         means = self.means.view(1, 1, -1, 1, 1)
         stds = self.stds.view(1, 1, -1, 1, 1)
         return (x * stds) + means
 
     def forward(self, x, metadata, lead_time, rollout_step):
+        lead_time = lead_time if isinstance(lead_time, timedelta) else timedelta(hours=lead_time)
         x = self.normalise(x)
 
         H, W = x.size(-2), x.size(-1)
@@ -105,13 +111,11 @@ class Solaris(torch.nn.Module):
             W // self.encoder.patch_size,
         )
 
-        x = self.encoder(x, metadata, timedelta(hours=lead_time))
+        x = self.encoder(x, metadata, lead_time)
 
-        x = self.backbone(
-            x, timedelta(hours=lead_time), rollout_step=rollout_step, patch_res=patch_res
-        )
+        x = self.backbone(x, lead_time, rollout_step=rollout_step, patch_res=patch_res)
 
-        x = self.decoder(x, metadata, timedelta(hours=lead_time), patch_res=patch_res)
+        x = self.decoder(x, metadata, lead_time, patch_res=patch_res)
 
         x = self.unnormalise(x)
 

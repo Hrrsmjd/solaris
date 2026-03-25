@@ -4,7 +4,7 @@ from typing import TypeVar
 
 import torch
 from einops import rearrange
-from timm.models.vision_transformer import trunc_normal_
+from timm.layers import trunc_normal_
 from torch import nn
 
 __all__ = [
